@@ -16,6 +16,8 @@ module TeddyMocks {
         public bar(): number {
             return this.barVal;
         }
+        public fooBar(n: number): void {
+        }
     }
 
     test("Stub only accepts object types", function () {
@@ -75,13 +77,13 @@ module TeddyMocks {
         equal(stub.object.bar(), expected, "Correct value returned");
     });
 
-    test("clear() resets state", function () {
+    test("clearStubbedMethods() resets state of stubbed methods", function () {
 
         var expected = -1;
         var stub = new Stub<ObjectToStub>(ObjectToStub);
 
         stub.stubs(m => m.bar()).andReturns(expected);
-        stub.clear();
+        stub.clearStubbedMethods();
 
         equal(stub.object.bar(), expected, "Correct value returned");
     });
@@ -93,5 +95,92 @@ module TeddyMocks {
 
         stub.stubs(m => m.bar()).withCallback(otm => expected);
         equal(stub.object.bar(), expected, "Correct value returned");
+    });
+
+    test("Stub correctly asserts with no arguments", function () {
+
+        var expected = 123;
+        var stub = new Stub<ObjectToStub>(ObjectToStub);
+
+        stub.stubs(m => m.bar()).andReturns(expected);
+        equal(stub.object.bar(), expected, "Correct value returned");
+
+        ok(stub.assertsThat(s => s.bar()).wasCalled(), "bar was called one time");
+    });
+
+    test("clearRecordedMethods clears all recorded methods", function () {
+        var stub = new Stub<ObjectToStub>(ObjectToStub);
+        stub.stubs(s => s.bar()).andReturns(123);
+        stub.object.bar();
+        ok(stub.assertsThat(s => s.bar()).wasCalled(), "bar was called");
+        stub.clearRecordedMethods();
+        ok(!stub.assertsThat(s => s.bar()).wasCalled(), "bar was erased from the stub");
+    });
+
+    test("Stub correctly asserts with arguments", function () {
+
+        var expected = 123;
+        var notExpected = 321;
+        var stub = new Stub<ObjectToStub>(ObjectToStub);
+
+        stub.stubs(m => m.fooBar(expected));
+        stub.object.fooBar(expected);
+
+        ok(stub.assertsThat(s => s.fooBar(expected)).wasCalled(), "bar was called times with expected arguments");
+        ok(!stub.assertsThat(s => s.fooBar(notExpected)).wasCalled(), "did not assert on unexpected parameters");
+    });
+
+    test("wasCalled overloads work as expected", function () {
+
+        var expected = 123;
+        var stub = new Stub<ObjectToStub>(ObjectToStub);
+
+        stub.stubs(m => m.fooBar(expected));
+
+        stub.object.fooBar(expected);
+        ok(stub.assertsThat(s => s.fooBar(expected)).wasCalled(), "wasCalled worked");
+
+        stub.object.fooBar(expected);
+        ok(stub.assertsThat(s => s.fooBar(expected)).wasCalledTwoTimes(), "wasCalledTwoTimes worked");
+
+        stub.object.fooBar(expected);
+        ok(stub.assertsThat(s => s.fooBar(expected)).wasCalledThreeTimes(), "wasCalledThreeTimes worked");
+
+        stub.object.fooBar(expected);
+        ok(stub.assertsThat(s => s.fooBar(expected)).wasCalledFourTimes(), "wasCalledFourTimes worked");
+
+        stub.object.fooBar(expected);
+        ok(stub.assertsThat(s => s.fooBar(expected)).wasCalledFiveTimes(), "wasCalledFiveTimes worked");
+
+        stub.object.fooBar(expected);
+        ok(stub.assertsThat(s => s.fooBar(expected)).wasCalledXTimes(6), "wasCalledXTimes worked");
+
+        for (var i = 0; i < 20; i++) {
+            stub.object.fooBar(expected);
+            stub.object.fooBar(expected);
+            stub.object.fooBar(expected);
+            stub.object.fooBar(expected);
+            stub.object.fooBar(expected);
+        }
+
+        ok(stub.assertsThat(s => s.fooBar(expected)).wasCalledAnyNumberOfTimes(), "wasCalledAnyNumberOfTimes worked");
+    });
+
+    test("stub records even if method was not stub", function () {
+        var stub = new Stub<ObjectToStub>(ObjectToStub);
+        equal(stub.object.bar(), -1, "bar was called as expected");
+        ok(stub.assertsThat(s => s.bar()).wasCalled(), "Was able to assert even without stubbing");
+    });
+
+    test("usingCallback invokes callback to verify method calls", function () {
+        var stub = new Stub<ObjectToStub>(ObjectToStub);
+        stub.object.fooBar(123);
+        stub.object.fooBar(123456);
+        stub.object.fooBar(123456789);
+        ok(stub.assertsThat(s => s.fooBar(0)).usingCallback(args => args[0] === 123), "callback was invoked to verify arguments");
+    });
+
+    test("", function () {
+
     });
 }
