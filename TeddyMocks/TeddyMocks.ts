@@ -19,7 +19,13 @@ module TeddyMocks {
         wasCalledAnyNumberOfTimes(): boolean;
         wasCalledXTimes(x: number): boolean;
         usingCallback(validatingCallback: (arguments: IArguments) => boolean);
-    }   
+    }
+
+    interface IReplacedGlobal {
+        container: Object;
+        objectName: string;
+        originalFunction: Function;
+    }    
 
     // This is the stub class that users will ... use to stub things with the API:
     export class Stub<T> implements IState1<T> {
@@ -82,6 +88,38 @@ module TeddyMocks {
                 expectation.recordedCalls = []; // Erase all recorded methods:
             }
         }
+    }
+
+    // This class allows global objects to be stubbed and later reverted for future tests.
+    export class GlobalOverride {
+
+        static isInGlobalScope: boolean;
+        static replacedGlobals: Array<IReplacedGlobal>;
+
+        static createScope(scopeFunc: () => void): void {
+            this.isInGlobalScope = true;
+            this.replacedGlobals = [];
+            try {
+
+            } finally {
+                // Make sure we always revert state:
+                this.isInGlobalScope = false;
+                this.replacedGlobals.forEach(global => global.container[global.objectName] = global.originalFunction);
+            }
+        }
+    }
+
+    export class GlobalStub<T> extends Stub<T> {
+
+        constructor(objectName: string, container?: Object) {
+
+            if (!GlobalOverride.isInGlobalScope) {
+                throw "Must be in a global scope in order to use GlobalStubs";
+            }
+
+            super((container) ? container[objectName] : window[objectName]);
+        }
+
     }
 
     class State2<T, U> implements IState2<T, U> {
@@ -158,9 +196,13 @@ module TeddyMocks {
             // mocking only the last function defined on the type:
             var functionNames: Array<string> = [];
             for (var parameter in basePrototype) {
-                var property = basePrototype[parameter];
-                if (typeof property === "function") {
-                    functionNames.push(parameter);
+                try {
+                    var property = basePrototype[parameter];
+                    if (typeof property === "function") {
+                        functionNames.push(parameter);
+                    }
+                } catch (e) {
+                    // Some properties are not accessible.
                 }
             }
 

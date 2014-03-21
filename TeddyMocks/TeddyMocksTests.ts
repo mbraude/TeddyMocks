@@ -194,4 +194,16 @@ module TeddyMocks {
 
         equal(stub.object.bar(321), 123, "Stubbed even though arguments did not match");
     });
+
+    test("GlobalStubs must be in global scope to work", function () {
+
+        var threw = false;
+        try {
+            var globalStub = new GlobalStub<XMLHttpRequest>("XMLHttpRequest");
+        } catch (e) {
+            threw = true;
+        }
+
+        ok(threw, "Threw when creating a global stub outside of a global scope");
+    });
 }
