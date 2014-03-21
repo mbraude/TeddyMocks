@@ -206,4 +206,24 @@ module TeddyMocks {
 
         ok(threw, "Threw when creating a global stub outside of a global scope");
     });
+
+    test("GlobalStubs can be created in a global scope", function () {
+        GlobalOverride.createScope(() => {
+            var globalStub = new GlobalStub<XMLHttpRequest>("XMLHttpRequest");
+            ok(globalStub.object.send, "Stub was created successfully");
+        });
+    });
+
+    test("GlobalStub replaces implementation", function () {
+        GlobalOverride.createScope(() => {
+
+            var globalStub = new GlobalStub<XMLHttpRequest>("XMLHttpRequest");
+            globalStub.stubs(s => s.send(undefined), false);
+
+            var request = new XMLHttpRequest();
+            request.send(undefined);
+
+            ok(globalStub.assertsThat(s => s.send(undefined)).wasCalled(), "Globally overriden stub was created successfully");
+        });
+    });
 }

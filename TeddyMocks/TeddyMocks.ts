@@ -100,7 +100,7 @@ module TeddyMocks {
             this.isInGlobalScope = true;
             this.replacedGlobals = [];
             try {
-
+                scopeFunc();
             } finally {
                 // Make sure we always revert state:
                 this.isInGlobalScope = false;
@@ -117,9 +117,38 @@ module TeddyMocks {
                 throw "Must be in a global scope in order to use GlobalStubs";
             }
 
-            super((container) ? container[objectName] : window[objectName]);
-        }
+            container = container || window;
+            var replacedGlobal: IReplacedGlobal = {
+                container: container,
+                objectName: objectName,
+                originalFunction: container[objectName]
+            };
 
+            super(replacedGlobal.originalFunction);
+
+            var replacementObject = eval("(function() { function " + objectName + "() { } return " + objectName + "; })()");
+            replacementObject.prototype = replacedGlobal.originalFunction.prototype;
+
+            // For ever method that we stubbed in the base classes DynamicObject, create an override on the replacement object that calls 
+            // back to this stub. We need to do this because the global replacement object will be recreated
+            // every time it is new'ed up, but it needs to map back to the original implementation in DynamicObject:
+            var overloadedFunctions: Array<string> = [];
+            for (var propertyName in this.object) {
+                var property = this.object[propertyName];
+                if (typeof property === "function") {
+                    overloadedFunctions.push(propertyName);
+                }
+            }
+
+            overloadedFunctions.forEach((name: string) => {
+                replacementObject.prototype[name] = () => {
+                    (<Function>this.object[name]).apply(this.object, arguments);
+                }
+            });
+
+            replacedGlobal.container[replacedGlobal.objectName] = replacementObject;
+            GlobalOverride.replacedGlobals.push(replacedGlobal);
+        }
     }
 
     class State2<T, U> implements IState2<T, U> {
