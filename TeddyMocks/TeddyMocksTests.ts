@@ -13,14 +13,14 @@ module TeddyMocks {
         public foo() {
             throw "Should not be called";
         }
-        public bar(): number {
+        public bar(arg?: number): number {
             return this.barVal;
         }
         public fooBar(n: number): void {
         }
     }
 
-    test("Stub only accepts object types", function () {
+    test("Stub only accepts function types", function () {
 
         var stub = new Stub<ObjectToStub>(ObjectToStub);
         ok(stub !== undefined, "Accepted a function (class)");
@@ -180,7 +180,18 @@ module TeddyMocks {
         ok(stub.assertsThat(s => s.fooBar(0)).usingCallback(args => args[0] === 123), "callback was invoked to verify arguments");
     });
 
-    test("", function () {
+    test("assertsThat matches recorded methods even if arguments do not match", function () {
+        var stub = new Stub<ObjectToStub>(ObjectToStub);
+        stub.stubs(s => s.fooBar(123));
+        stub.object.fooBar(123);
+        ok(stub.assertsThat(s => s.fooBar(0), false), "assertsThat successfully ignored arguments");
+        ok(stub.assertsThat(s => s.fooBar(123), true), "assertsThat matched arguments");
+    });
 
+    test("stubs matches all methods if told to ignore arguments", function () {
+        var stub = new Stub<ObjectToStub>(ObjectToStub);
+        stub.stubs(s => s.bar(0), false).andReturns(123);
+
+        equal(stub.object.bar(321), 123, "Stubbed even though arguments did not match");
     });
 }

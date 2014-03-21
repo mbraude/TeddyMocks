@@ -1,8 +1,8 @@
 module TeddyMocks {
 
     export interface IState1<T> {
-        stubs<U>(stubFunc: (t: T) => U): IState2<T, U>;
-        assertsThat<U>(assertFunc: (t: T) => U): IState3<T, U>;
+        stubs<U>(stubFunc: (t: T) => U, validateArguments?: boolean): IState2<T, U>;
+        assertsThat<U>(assertFunc: (t: T) => U, validateArguments?: boolean): IState3<T, U>;
     }
 
     export interface IState2<T, U> {
@@ -36,10 +36,11 @@ module TeddyMocks {
             this.object = <T><any>(new DynamicObject(type));
         }
 
-        public stubs<U>(stubFunc: (t: T) => U): IState2<T, U> {            
+        public stubs<U>(stubFunc: (t: T) => U, validateArguments?: boolean): IState2<T, U> {            
 
             var dynamicObject = <DynamicObject><any>this.object;
             dynamicObject.isStubbing = true;
+            dynamicObject.isValidatingArguments = (validateArguments !== undefined) ? validateArguments  : true;
 
             try {
                 stubFunc(this.object);
@@ -47,14 +48,16 @@ module TeddyMocks {
 
             } finally {
                 dynamicObject.isStubbing = false;
+                dynamicObject.isValidatingArguments = false;
 
             }
         }
 
-        public assertsThat<U>(assertFunc: (t: T) => U): IState3<T, U> {
+        public assertsThat<U>(assertFunc: (t: T) => U, validateArguments?: boolean): IState3<T, U> {
 
             var dynamicObject = <DynamicObject><any>this.object;
             dynamicObject.isAsserting = true;
+            dynamicObject.isValidatingArguments = (validateArguments !== undefined) ? validateArguments : true;
 
             try {
                 assertFunc(this.object);
@@ -62,6 +65,7 @@ module TeddyMocks {
 
             } finally {
                 dynamicObject.isAsserting = false;
+                dynamicObject.isValidatingArguments = false;
 
             }
         }
@@ -140,6 +144,7 @@ module TeddyMocks {
 
         public isStubbing: boolean;
         public isAsserting: boolean;
+        public isValidatingArguments: boolean;
         public expectations: any = {};        
         public lastExpectation: Expectation;
 
@@ -162,7 +167,7 @@ module TeddyMocks {
             functionNames.forEach((name: string) => {
                 this[name] = function () {                    
                     if (this.isStubbing) {
-                        this.lastExpectation = new Expectation(arguments);
+                        this.lastExpectation = new Expectation(arguments, this.isValidatingArguments);
                         this.expectations[name] = this.lastExpectation;
 
                     } else {
@@ -170,7 +175,7 @@ module TeddyMocks {
                         if (this.isAsserting) {
                             this.lastExpectation = expectation;
                             if (this.lastExpectation) {
-                                this.lastExpectation.match(arguments);
+                                this.lastExpectation.match(arguments, this.isValidatingArguments);
                             }
 
                             return undefined;
@@ -201,16 +206,16 @@ module TeddyMocks {
         public recordedCalls: Array<IArguments>
         public matchCount: number;
 
-        constructor(public expectedArguments?: IArguments) {
+        constructor(public expectedArguments?: IArguments, public validateArguments?: boolean) {
             this.recordedCalls = [];
         }
 
         public matchStubbedArguments(): boolean {
-            return this.expectedArguments && this.countMatchedMethods(this.expectedArguments) === 1;
+            return this.expectedArguments && this.countMatchedMethods(this.expectedArguments, this.validateArguments) === 1;
         }
 
-        public match(expectedArguments: IArguments): void {
-            this.matchCount = this.countMatchedMethods(expectedArguments);
+        public match(expectedArguments: IArguments, validateArguments: boolean): void {
+            this.matchCount = this.countMatchedMethods(expectedArguments, validateArguments);
         }
 
         public record(arguments: IArguments): void {
@@ -223,14 +228,17 @@ module TeddyMocks {
                 : this.returnValue;
         }
 
-        private countMatchedMethods(expectedArguments: IArguments): number {
+        private countMatchedMethods(expectedArguments: IArguments, validateArguments: boolean): number {
 
             var count = 0;
             this.recordedCalls.forEach((actualArguments: IArguments) => {
                 if (expectedArguments.length === actualArguments.length) {
+
                     var argumentsMatch = true;
-                    for (var i = 0; i < expectedArguments.length && argumentsMatch; i++) {
-                        argumentsMatch = (expectedArguments[i] === actualArguments[i]);
+                    if (validateArguments) {
+                        for (var i = 0; i < expectedArguments.length && argumentsMatch; i++) {
+                            argumentsMatch = (expectedArguments[i] === actualArguments[i]);
+                        }
                     }
 
                     if (argumentsMatch) {
