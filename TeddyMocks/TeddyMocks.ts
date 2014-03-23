@@ -266,7 +266,13 @@ module TeddyMocks {
             });
 
             // Call the base constructor:
-            superType.apply(this, arguments);
+            try {
+                superType.apply(this, arguments);
+            } catch (e) {
+                // Nothing to do. Chrome does not allow us to call some functions expicitly, they can
+                // only be called via new. This only seems to apply to DOM elements and the like, so it 
+                // should be harmless to any user-defined class.
+            }
         }
     }
 
