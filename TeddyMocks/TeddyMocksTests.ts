@@ -2,7 +2,7 @@
 
 module TeddyMocks {
 
-    class ObjectToStub {
+    export class ObjectToStub {
 
         private barVal: number;
 
@@ -18,6 +18,10 @@ module TeddyMocks {
         }
         public fooBar(n: number): void {
         }
+    }
+
+    export function globalFunction() {
+        throw "Should not be called";
     }
 
     test("Stub only accepts function types", function () {
@@ -224,6 +228,29 @@ module TeddyMocks {
             request.send(undefined);
 
             ok(globalStub.assertsThat(s => s.send(undefined)).wasCalled(), "Globally overriden stub was created successfully");
+        });
+    });    
+
+    test("GlobalStub cannot replace global functions if not in scope", function () {
+        var threw = false;
+        try {
+            GlobalOverride.replace("globalFunction", TeddyMocks, () => { });
+        }
+        catch (ex) {
+            threw = true;
+        }
+
+        ok(threw, "Failed outside of a global scope");
+    });
+
+    test("GlobalStub replaces global functions", function () {
+        GlobalOverride.createScope(() => {
+
+            var overrideWasCalled = false;
+            GlobalOverride.replace("globalFunction", TeddyMocks, () => overrideWasCalled = true);
+
+            TeddyMocks.globalFunction();
+            ok(overrideWasCalled, "Overridden method was called");
         });
     });
 }

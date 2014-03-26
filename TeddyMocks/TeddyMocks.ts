@@ -107,6 +107,20 @@ module TeddyMocks {
                 this.replacedGlobals.forEach(global => global.container[global.objectName] = global.originalFunction);
             }
         }
+
+        static replace(functionName: string, container: any, replacement: Function): void {
+
+            if (!this.isInGlobalScope) {
+                throw "Must be in a global scope in order to replace global functions";
+            }
+
+            container[functionName] = replacement;
+            this.replacedGlobals.push({
+                container: container,
+                objectName: functionName,
+                originalFunction: container[functionName]
+            });
+        }
     }
 
     export class GlobalStub<T> extends Stub<T> {
