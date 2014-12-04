@@ -114,11 +114,12 @@ module TeddyMocks {
                 throw "Must be in a global scope in order to replace global functions";
             }
 
+            var originalFunction = container[functionName];
             container[functionName] = replacement;
             this.replacedGlobals.push({
                 container: container,
                 objectName: functionName,
-                originalFunction: container[functionName]
+                originalFunction: originalFunction
             });
         }
     }
