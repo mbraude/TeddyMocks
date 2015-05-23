@@ -155,8 +155,8 @@ module TeddyMocks {
                 }
             }
 
-            overloadedFunctions.forEach((name: string) => {
-                replacementObject.prototype[name] = () => {
+            overloadedFunctions.forEach(function(name: string) {
+                replacementObject.prototype[name] = function() {
                     (<Function>this.object[name]).apply(this.object, arguments);
                 }
             });
@@ -174,7 +174,7 @@ module TeddyMocks {
             this.expectation.returnValue = u;
         }
 
-        public withCallback(callback: (arguments: IArguments) => U): void {
+        public withCallback(callback: (iarguments: IArguments) => U): void {
             this.expectation.callback = callback;
         }
     }
@@ -211,7 +211,7 @@ module TeddyMocks {
             return this.wasCalledInternal(x);
         }
 
-        public usingCallback(callback: (arguments: IArguments) => boolean): boolean {
+        public usingCallback(callback: (iarguments: IArguments) => boolean): boolean {
             return this.lastExpectation.recordedCalls.some(callback);
         }
 
@@ -294,7 +294,7 @@ module TeddyMocks {
     class Expectation {
 
         public returnValue: any;
-        public callback: (arguments: IArguments) => any;
+        public callback: (iarguments: IArguments) => any;
         public recordedCalls: Array<IArguments>
         public matchCount: number;
 
@@ -310,13 +310,13 @@ module TeddyMocks {
             this.matchCount = this.countMatchedMethods(expectedArguments, validateArguments);
         }
 
-        public record(arguments: IArguments): void {
-            this.recordedCalls.push(arguments);
+        public record(iarguments: IArguments): void {
+            this.recordedCalls.push(iarguments);
         }
 
-        public getReturnValue(arguments: IArguments): any {
+        public getReturnValue(iarguments: IArguments): any {
             return this.callback
-                ? this.callback(arguments)
+                ? this.callback(iarguments)
                 : this.returnValue;
         }
 
